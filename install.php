@@ -69,21 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo = new PDO($dsn, $config['db_user'], $config['db_pass']);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Read and execute schema
-                $schema = file_get_contents('page_builder_schema.sql');
-                
-                // Remove the database creation part since we already created it
-                $schema = preg_replace('/CREATE DATABASE.*?;/is', '', $schema);
-                $schema = preg_replace('/USE page_builder;/i', '', $schema);
-                
-                // Split into individual statements
-                $statements = array_filter(array_map('trim', explode(';', $schema)));
-                
-                foreach ($statements as $statement) {
-                    if (!empty($statement) && !preg_match('/^--/', $statement)) {
-                        $pdo->exec($statement);
-                    }
-                }
+                // Execute SQL schema file
+                runSqlFile($pdo, 'page_builder_schema.sql');
                 
                 $success[] = 'Database schema installed successfully!';
                 $step = 3;
@@ -173,6 +160,36 @@ function updateConfigFile($config) {
     $content = str_replace("define('DB_PASS', '');", "define('DB_PASS', '{$config['db_pass']}');", $content);
     
     file_put_contents($configFile, $content);
+}
+
+function runSqlFile(PDO $pdo, $file) {
+    $sql = file_get_contents($file);
+
+    // Remove database creation commands
+    $sql = preg_replace('/CREATE DATABASE.*?;/is', '', $sql);
+    $sql = preg_replace('/USE\s+page_builder;/i', '', $sql);
+
+    $delimiter = ';';
+    $statement = '';
+    foreach (preg_split("/(\r?\n)/", $sql) as $line) {
+        if (preg_match('/^\s*--/', $line) || preg_match('/^\s*#/', $line)) {
+            continue;
+        }
+
+        if (preg_match('/^\s*DELIMITER\s+(.+)$/i', $line, $m)) {
+            $delimiter = $m[1];
+            continue;
+        }
+
+        $statement .= $line . "\n";
+        if (substr(trim($line), -strlen($delimiter)) === $delimiter) {
+            $exec = substr($statement, 0, -strlen($delimiter));
+            if (trim($exec) !== '') {
+                $pdo->exec($exec);
+            }
+            $statement = '';
+        }
+    }
 }
 
 function checkRequirements() {
