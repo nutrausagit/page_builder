@@ -311,9 +311,9 @@ END//
 
 -- Procedure untuk backup page content
 CREATE PROCEDURE backup_page_content(
-    IN page_id INT,
-    IN user_id INT,
-    IN backup_notes TEXT
+    IN p_page_id INT,
+    IN p_user_id INT,
+    IN p_backup_notes TEXT
 )
 BEGIN
     DECLARE current_version INT DEFAULT 1;
@@ -323,16 +323,16 @@ BEGIN
     
     -- Get current max version
     SELECT COALESCE(MAX(version_number), 0) + 1 INTO current_version
-    FROM page_versions WHERE page_id = page_id;
+    FROM page_versions WHERE page_id = p_page_id;
     
     -- Get current page content
-    SELECT content, custom_css, custom_js 
+    SELECT content, custom_css, custom_js
     INTO page_content, page_css, page_js
-    FROM pages WHERE id = page_id;
+    FROM pages WHERE id = p_page_id;
     
     -- Insert backup version
     INSERT INTO page_versions (page_id, version_number, content, custom_css, custom_js, created_by, notes)
-    VALUES (page_id, current_version, page_content, page_css, page_js, user_id, backup_notes);
+    VALUES (p_page_id, current_version, page_content, page_css, page_js, p_user_id, p_backup_notes);
     
     SELECT current_version as version_number;
 END//

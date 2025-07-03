@@ -18,8 +18,8 @@ class Auth {
         
         // Find user
         $user = dbFetch(
-            "SELECT * FROM users WHERE (username = :username OR email = :username) AND is_active = 1",
-            ['username' => $username]
+            "SELECT * FROM users WHERE (username = :username OR email = :email) AND is_active = 1",
+            ['username' => $username, 'email' => $username]
         );
         
         if (!$user) {
